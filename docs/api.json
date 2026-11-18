@@ -1,0 +1,320 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Delcom Blog API",
+    "description": "Dokumentasi REST API Delcom Blog Multi-Tier & AI Generator dengan Integrasi Search Engine",
+    "version": "1.0"
+  },
+  "host": "localhost:8081",
+  "basePath": "/",
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/api/public/categories": {
+      "get": {
+        "summary": "Mengambil daftar seluruh kategori artikel blog",
+        "tags": ["Public"],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/public/posts": {
+      "get": {
+        "summary": "Mengambil daftar seluruh artikel terbit",
+        "tags": ["Public"],
+        "parameters": [
+          { "name": "q", "in": "query", "type": "string", "description": "Kata kunci pencarian" },
+          { "name": "category", "in": "query", "type": "string", "description": "Filter kategori" }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/public/posts/{slug}": {
+      "get": {
+        "summary": "Mengambil detail artikel publik terbit berdasarkan slug",
+        "tags": ["Public"],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "type": "string" }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Pendaftaran akun penulis baru",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "username": { "type": "string" },
+                "email": { "type": "string" },
+                "password": { "type": "string" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "Bad Request" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Autentikasi kredensial pengguna dan penerbitan token JWT",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": { "type": "string" },
+                "password": { "type": "string" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout sesi pengguna",
+        "tags": ["Auth"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "summary": "Mengambil data profil penulis yang sedang login",
+        "tags": ["Auth"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      },
+      "put": {
+        "summary": "Memperbarui informasi profil penulis yang sedang login",
+        "tags": ["Auth"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "email": { "type": "string" },
+                "password": { "type": "string" },
+                "avatar": { "type": "string" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/posts": {
+      "get": {
+        "summary": "Mengambil seluruh daftar artikel milik penulis yang sedang login",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      },
+      "post": {
+        "summary": "Membuat artikel baru",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "category": { "type": "string" },
+                "excerpt": { "type": "string" },
+                "content": { "type": "string" },
+                "cover_image_path": { "type": "string" },
+                "is_published": { "type": "boolean" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Created" }
+        }
+      }
+    },
+    "/api/posts/stats": {
+      "get": {
+        "summary": "Mengambil ringkasan 3 kartu statistik penulis",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/posts/{id}": {
+      "get": {
+        "summary": "Mengambil detail satu artikel milik penulis berdasarkan ID",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "404": { "description": "Not Found" }
+        }
+      },
+      "put": {
+        "summary": "Memperbarui artikel milik penulis",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "category": { "type": "string" },
+                "excerpt": { "type": "string" },
+                "content": { "type": "string" },
+                "cover_image_path": { "type": "string" },
+                "is_published": { "type": "boolean" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus artikel milik penulis",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/posts/{id}/toggle-publish": {
+      "patch": {
+        "summary": "Mengubah status publikasi artikel secara instan",
+        "tags": ["Posts"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/posts/ai-generate": {
+      "post": {
+        "summary": "Menghasilkan draf artikel utuh menggunakan AI dan Search Engine",
+        "tags": ["AI"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "topic": { "type": "string" },
+                "category": { "type": "string" },
+                "include_web_search": { "type": "boolean" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "Mengambil data seluruh pengguna sistem beserta statistik",
+        "tags": ["Admin"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/admin/posts": {
+      "get": {
+        "summary": "Monitoring arsip seluruh artikel dari semua penulis",
+        "tags": ["Admin"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/posts": {
+      "get": {
+        "summary": "Mengambil seluruh artikel yang ditulis oleh pengguna tertentu",
+        "tags": ["Admin"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

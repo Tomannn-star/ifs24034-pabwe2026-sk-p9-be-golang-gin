@@ -1,0 +1,26 @@
+swagger: "2.0"
+info:
+  title: "Delcom Blog API"
+  description: "Dokumentasi REST API Delcom Blog Multi-Tier & AI Generator dengan Integrasi Search Engine"
+  version: "1.0"
+host: "localhost:8081"
+basePath: "/"
+schemes:
+  - "http"
+paths:
+  /api/public/categories:
+    get:
+      summary: "Mengambil daftar seluruh kategori artikel blog"
+      tags:
+        - "Public"
+      responses:
+        200:
+          description: "OK"
+  /api/public/posts:
+    get:
+      summary: "Mengambil daftar seluruh artikel terbit"
+      tags:
+        - "Public"
+      responses:
+        200:
+          description: "OK"
