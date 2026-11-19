@@ -12,6 +12,11 @@ import (
 
 var StandardCategories = []string{"Teknologi", "Pendidikan", "Gaya Hidup", "Bisnis", "Opini", "Umum"}
 
+var (
+	ErrPostNotFound = errors.New("post not found")
+	ErrForbidden    = errors.New("forbidden")
+)
+
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-z0-9]+`)
 
 func CalculateReadingTime(content string) int {
@@ -169,18 +174,24 @@ func (s *service) GetPostStats(userID uint) (*PostStatsResponse, error) {
 }
 
 func (s *service) GetAuthorPostByID(id, userID uint) (*PostResponse, error) {
-	post, err := s.repo.FindByIDAndUserID(id, userID)
-	if err != nil {
-		return nil, errors.New("post not found")
+	post, err := s.repo.FindByID(id)
+	if err != nil || post == nil {
+		return nil, ErrPostNotFound
+	}
+	if post.UserID != userID {
+		return nil, ErrForbidden
 	}
 	res := toPostResponse(post)
 	return &res, nil
 }
 
 func (s *service) UpdateAuthorPost(id, userID uint, req *UpdatePostRequest) (*PostResponse, error) {
-	post, err := s.repo.FindByIDAndUserID(id, userID)
-	if err != nil {
-		return nil, errors.New("post not found")
+	post, err := s.repo.FindByID(id)
+	if err != nil || post == nil {
+		return nil, ErrPostNotFound
+	}
+	if post.UserID != userID {
+		return nil, ErrForbidden
 	}
 
 	if req.Title != "" && req.Title != post.Title {
@@ -225,9 +236,12 @@ func (s *service) UpdateAuthorPost(id, userID uint, req *UpdatePostRequest) (*Po
 }
 
 func (s *service) TogglePublish(id, userID uint) (*PostResponse, error) {
-	post, err := s.repo.FindByIDAndUserID(id, userID)
-	if err != nil {
-		return nil, errors.New("post not found")
+	post, err := s.repo.FindByID(id)
+	if err != nil || post == nil {
+		return nil, ErrPostNotFound
+	}
+	if post.UserID != userID {
+		return nil, ErrForbidden
 	}
 
 	if post.IsPublished {
@@ -249,9 +263,12 @@ func (s *service) TogglePublish(id, userID uint) (*PostResponse, error) {
 }
 
 func (s *service) DeleteAuthorPost(id, userID uint) error {
-	post, err := s.repo.FindByIDAndUserID(id, userID)
-	if err != nil {
-		return errors.New("post not found")
+	post, err := s.repo.FindByID(id)
+	if err != nil || post == nil {
+		return ErrPostNotFound
+	}
+	if post.UserID != userID {
+		return ErrForbidden
 	}
 	return s.repo.Delete(post)
 }

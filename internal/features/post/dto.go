@@ -4,7 +4,7 @@ import "time"
 
 type CreatePostRequest struct {
 	Title          string `json:"title" binding:"required"`
-	Category       string `json:"category" binding:"required"`
+	Category       string `json:"category"`
 	Excerpt        string `json:"excerpt"`
 	Content        string `json:"content" binding:"required"`
 	CoverImagePath string `json:"cover_image_path"`
@@ -39,9 +39,11 @@ type PostResponse struct {
 
 type PostStatsResponse struct {
 	Total          int64 `json:"total"`
+	TotalArticles  int64 `json:"total_articles"`
 	TotalPosts     int64 `json:"total_posts"`
 	TotalPublished int64 `json:"total_published"`
 	TotalTerbit    int64 `json:"total_terbit"`
+	TotalSelesai   int64 `json:"total_selesai"`
 	TotalDraft     int64 `json:"total_draft"`
 	BelumSelesai   int64 `json:"belum_selesai"`
 }

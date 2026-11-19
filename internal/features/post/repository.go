@@ -102,9 +102,11 @@ func (r *repository) GetStatsByUserID(userID uint) (*PostStatsResponse, error) {
 	draft := total - published
 	return &PostStatsResponse{
 		Total:          total,
+		TotalArticles:  total,
 		TotalPosts:     total,
 		TotalPublished: published,
 		TotalTerbit:    published,
+		TotalSelesai:   published,
 		TotalDraft:     draft,
 		BelumSelesai:   draft,
 	}, nil

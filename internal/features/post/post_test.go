@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -373,6 +374,15 @@ func (m *mockErrPostService) GetAdminPosts() ([]PostResponse, error) {
 func (m *mockErrPostService) GetAdminUserPosts(userID uint) ([]PostResponse, error) {
 	return nil, errors.New("err")
 }
+func (m *mockErrPostService) UpdateAuthorPost(id, userID uint, req *UpdatePostRequest) (*PostResponse, error) {
+	return nil, errors.New("err")
+}
+func (m *mockErrPostService) TogglePublish(id, userID uint) (*PostResponse, error) {
+	return nil, errors.New("err")
+}
+func (m *mockErrPostService) DeleteAuthorPost(id, userID uint) error {
+	return errors.New("err")
+}
 
 func TestPost_Handler(t *testing.T) {
 	db := setupTestDB(t)
@@ -541,9 +551,9 @@ func TestPost_Handler(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-Auth", "valid")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 
-	// 11. TogglePublish: 200, 401, 400 (bad id), 400 (not found)
+	// 11. TogglePublish: 200, 401, 400 (bad id), 404 (not found)
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPatch, "/api/posts/1/toggle-publish", nil)
 	req.Header.Set("X-Test-Auth", "valid")
@@ -565,9 +575,9 @@ func TestPost_Handler(t *testing.T) {
 	req, _ = http.NewRequest(http.MethodPatch, "/api/posts/9999/toggle-publish", nil)
 	req.Header.Set("X-Test-Auth", "valid")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 
-	// 12. DeleteAuthorPost: 200, 401, 400 (bad id), 400 (not found)
+	// 12. DeleteAuthorPost: 200, 401, 400 (bad id), 404 (not found)
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodDelete, "/api/posts/1", nil)
 	req.Header.Set("X-Test-Auth", "valid")
@@ -589,7 +599,7 @@ func TestPost_Handler(t *testing.T) {
 	req, _ = http.NewRequest(http.MethodDelete, "/api/posts/9999", nil)
 	req.Header.Set("X-Test-Auth", "valid")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 
 	// 13. Admin handlers
 	w = httptest.NewRecorder()
@@ -623,6 +633,9 @@ func TestPost_Handler(t *testing.T) {
 	rErr.GET("/api/admin/users", errH.GetAdminUsers)
 	rErr.GET("/api/admin/posts", errH.GetAdminPosts)
 	rErr.GET("/api/admin/users/:id/posts", errH.GetAdminUserPosts)
+	rErr.PUT("/api/posts/:id", errH.UpdateAuthorPost)
+	rErr.PATCH("/api/posts/:id/toggle-publish", errH.TogglePublish)
+	rErr.DELETE("/api/posts/:id", errH.DeleteAuthorPost)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodGet, "/api/public/posts", nil)
@@ -659,4 +672,56 @@ func TestPost_Handler(t *testing.T) {
 	req, _ = http.NewRequest(http.MethodGet, "/api/admin/users/1/posts", nil)
 	rErr.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPut, "/api/posts/1", bytes.NewReader(upBody))
+	req.Header.Set("Content-Type", "application/json")
+	rErr.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPatch, "/api/posts/1/toggle-publish", nil)
+	rErr.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodDelete, "/api/posts/1", nil)
+	rErr.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 15. Forbidden tests (post belongs to user.ID, accessed by userID 999)
+	pForbid, _ := svc.CreatePost(user.ID, &CreatePostRequest{
+		Title:    "Post To Forbid",
+		Category: "Umum",
+		Content:  "Content forbid",
+	})
+	forbidPath := fmt.Sprintf("/api/posts/%d", pForbid.ID)
+
+	rForbid := gin.New()
+	rForbid.Use(func(c *gin.Context) { c.Set("user_id", uint(999)); c.Next() })
+	rForbid.GET("/api/posts/:id", h.GetAuthorPostByID)
+	rForbid.PUT("/api/posts/:id", h.UpdateAuthorPost)
+	rForbid.PATCH("/api/posts/:id/toggle-publish", h.TogglePublish)
+	rForbid.DELETE("/api/posts/:id", h.DeleteAuthorPost)
+
+	wF := httptest.NewRecorder()
+	reqF, _ := http.NewRequest(http.MethodGet, forbidPath, nil)
+	rForbid.ServeHTTP(wF, reqF)
+	assert.Equal(t, http.StatusForbidden, wF.Code)
+
+	wF = httptest.NewRecorder()
+	reqF, _ = http.NewRequest(http.MethodPut, forbidPath, bytes.NewReader(upBody))
+	reqF.Header.Set("Content-Type", "application/json")
+	rForbid.ServeHTTP(wF, reqF)
+	assert.Equal(t, http.StatusForbidden, wF.Code)
+
+	wF = httptest.NewRecorder()
+	reqF, _ = http.NewRequest(http.MethodPatch, forbidPath+"/toggle-publish", nil)
+	rForbid.ServeHTTP(wF, reqF)
+	assert.Equal(t, http.StatusForbidden, wF.Code)
+
+	wF = httptest.NewRecorder()
+	reqF, _ = http.NewRequest(http.MethodDelete, forbidPath, nil)
+	rForbid.ServeHTTP(wF, reqF)
+	assert.Equal(t, http.StatusForbidden, wF.Code)
 }

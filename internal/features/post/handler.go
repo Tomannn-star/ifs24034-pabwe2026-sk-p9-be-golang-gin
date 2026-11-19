@@ -1,6 +1,7 @@
 package post
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -120,6 +121,10 @@ func (h *Handler) GetAuthorPostByID(c *gin.Context) {
 
 	post, err := h.service.GetAuthorPostByID(uint(id), userID)
 	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			response.Fail(c, http.StatusForbidden, "Forbidden: you do not have permission to access this post")
+			return
+		}
 		response.Fail(c, http.StatusNotFound, "Post not found")
 		return
 	}
@@ -148,6 +153,14 @@ func (h *Handler) UpdateAuthorPost(c *gin.Context) {
 
 	post, err := h.service.UpdateAuthorPost(uint(id), userID, &req)
 	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			response.Fail(c, http.StatusForbidden, "Forbidden: you do not have permission to access this post")
+			return
+		}
+		if errors.Is(err, ErrPostNotFound) {
+			response.Fail(c, http.StatusNotFound, "Post not found")
+			return
+		}
 		response.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -170,6 +183,14 @@ func (h *Handler) TogglePublish(c *gin.Context) {
 
 	post, err := h.service.TogglePublish(uint(id), userID)
 	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			response.Fail(c, http.StatusForbidden, "Forbidden: you do not have permission to access this post")
+			return
+		}
+		if errors.Is(err, ErrPostNotFound) {
+			response.Fail(c, http.StatusNotFound, "Post not found")
+			return
+		}
 		response.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -191,6 +212,14 @@ func (h *Handler) DeleteAuthorPost(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteAuthorPost(uint(id), userID); err != nil {
+		if errors.Is(err, ErrForbidden) {
+			response.Fail(c, http.StatusForbidden, "Forbidden: you do not have permission to access this post")
+			return
+		}
+		if errors.Is(err, ErrPostNotFound) {
+			response.Fail(c, http.StatusNotFound, "Post not found")
+			return
+		}
 		response.Fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
