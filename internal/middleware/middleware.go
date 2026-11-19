@@ -111,7 +111,7 @@ func NewRateLimiterStorage(limit int, window time.Duration) *RateLimiterStorage 
 	}
 }
 
-var defaultLimiter = NewRateLimiterStorage(100, time.Minute)
+var defaultLimiter = NewRateLimiterStorage(1000, time.Minute)
 
 func RateLimiter() gin.HandlerFunc {
 	return RateLimiterWithStorage(defaultLimiter)

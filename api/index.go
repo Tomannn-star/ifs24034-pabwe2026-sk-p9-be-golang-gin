@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	"app/internal/config"
@@ -32,16 +34,24 @@ func initialize() {
 	gin.SetMode(gin.ReleaseMode)
 	cfg := config.LoadConfig()
 
-	// On Vercel serverless environment, use in-memory SQLite
-	if os.Getenv("VERCEL") != "" || cfg.DBConnection != "pgsql" {
+	// In serverless environment (Vercel), use SQLite unless an external DB host is explicitly provided
+	if cfg.DBHost == "127.0.0.1" || cfg.DBHost == "localhost" || cfg.DBHost == "" || os.Getenv("DB_HOST") == "" {
 		cfg.DBConnection = "sqlite"
-		cfg.DBDatabase = ":memory:"
+		if runtime.GOOS == "windows" {
+			cfg.DBDatabase = filepath.Join(os.TempDir(), "delcom_blog.db")
+		} else {
+			cfg.DBDatabase = "/tmp/delcom_blog.db"
+		}
 	}
 
 	db, err := database.Connect(cfg)
 	if err != nil {
 		cfg.DBConnection = "sqlite"
-		cfg.DBDatabase = ":memory:"
+		if runtime.GOOS == "windows" {
+			cfg.DBDatabase = filepath.Join(os.TempDir(), "delcom_blog.db")
+		} else {
+			cfg.DBDatabase = "/tmp/delcom_blog.db"
+		}
 		db, err = database.Connect(cfg)
 		if err != nil {
 			initErr = fmt.Errorf("failed to connect database: %w", err)
@@ -76,12 +86,27 @@ func initialize() {
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"error":{"code":"500","message":"Panic in handler: %v"}}`, rec)))
+		}
+	}()
+
 	once.Do(initialize)
 
 	if initErr != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(fmt.Sprintf(`{"status":"error","message":"%s"}`, initErr.Error())))
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"error":{"code":"500","message":"Initialization error: %s"}}`, initErr.Error())))
+		return
+	}
+
+	if app == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":{"code":"500","message":"Router is not initialized"}}`))
 		return
 	}
 
