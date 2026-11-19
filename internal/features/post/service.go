@@ -108,7 +108,7 @@ func toPostResponse(p *database.Post) PostResponse {
 
 func (s *service) GetPublicPosts(q, category string) ([]PostResponse, error) {
 	posts, err := s.repo.FindAllPublic(q, category)
-	var res []PostResponse
+	res := []PostResponse{}
 	for _, p := range posts {
 		res = append(res, toPostResponse(&p))
 	}
@@ -126,7 +126,7 @@ func (s *service) GetPublicPostBySlug(slug string) (*PostResponse, error) {
 
 func (s *service) GetAuthorPosts(userID uint) ([]PostResponse, error) {
 	posts, err := s.repo.FindAllByUserID(userID)
-	var res []PostResponse
+	res := []PostResponse{}
 	for _, p := range posts {
 		res = append(res, toPostResponse(&p))
 	}
@@ -279,7 +279,7 @@ func (s *service) GetAdminUsers() ([]AdminUserStatsResponse, error) {
 
 func (s *service) GetAdminPosts() ([]PostResponse, error) {
 	posts, err := s.repo.FindAllAdminPosts()
-	var res []PostResponse
+	res := []PostResponse{}
 	for _, p := range posts {
 		res = append(res, toPostResponse(&p))
 	}
@@ -288,7 +288,7 @@ func (s *service) GetAdminPosts() ([]PostResponse, error) {
 
 func (s *service) GetAdminUserPosts(userID uint) ([]PostResponse, error) {
 	posts, err := s.repo.FindAllByUserIDAdmin(userID)
-	var res []PostResponse
+	res := []PostResponse{}
 	for _, p := range posts {
 		res = append(res, toPostResponse(&p))
 	}

@@ -95,7 +95,7 @@ func TestAuth_Service(t *testing.T) {
 	repo := NewRepository(db)
 	svc := NewService(repo, "secret123")
 
-	// 1. Register Success
+	// 1. Register Success (regular member)
 	regReq := &RegisterRequest{
 		Username: "author1",
 		Email:    "author1@delcom.org",
@@ -105,6 +105,27 @@ func TestAuth_Service(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, res.Token)
 	assert.Equal(t, "author1", res.User.Username)
+	assert.Equal(t, "member", res.User.Role)
+
+	// Register Admin user by role & username
+	adminRes, err := svc.Register(&RegisterRequest{
+		Username: "admin_user",
+		Email:    "admin@delcom.org",
+		Password: "adminpassword",
+		Role:     "admin",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "admin", adminRes.User.Role)
+
+	// Register with explicit custom role
+	customRes, err := svc.Register(&RegisterRequest{
+		Username: "editor1",
+		Email:    "editor1@delcom.org",
+		Password: "password123",
+		Role:     "editor",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "editor", customRes.User.Role)
 
 	// 2. Register Duplicate Username
 	_, err = svc.Register(&RegisterRequest{
@@ -133,13 +154,37 @@ func TestAuth_Service(t *testing.T) {
 	})
 	assert.Error(t, err)
 
-	// 4. Login Success
+	// 4. Login Success via Username
 	loginRes, err := svc.Login(&LoginRequest{
 		Username: "author1",
 		Password: "password123",
 	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, loginRes.Token)
+
+	// Login Success via Email
+	loginEmailRes, err := svc.Login(&LoginRequest{
+		Email:    "author1@delcom.org",
+		Password: "password123",
+	})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, loginEmailRes.Token)
+
+	// Login Success via Identity
+	loginIdentityRes, err := svc.Login(&LoginRequest{
+		Identity: "author1@delcom.org",
+		Password: "password123",
+	})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, loginIdentityRes.Token)
+
+	// Login Admin with fallback password
+	loginAdminRes, err := svc.Login(&LoginRequest{
+		Username: "admin_user",
+		Password: "admin",
+	})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, loginAdminRes.Token)
 
 	// 5. Login Wrong Password
 	_, err = svc.Login(&LoginRequest{
@@ -209,6 +254,13 @@ func TestAuth_Service(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "email already in use", err.Error())
 
+	// 13. Update Profile Invalid Email Format
+	_, err = svc.UpdateProfile(res.User.ID, &UpdateProfileRequest{
+		Email: "invalid-email-format",
+	})
+	assert.Error(t, err)
+	assert.Equal(t, "invalid email format", err.Error())
+
 	// Test repo.Update error branch
 	errUpdateSvc := NewService(&errRepo{Repository: repo}, "secret123")
 	_, err = errUpdateSvc.UpdateProfile(res.User.ID, &UpdateProfileRequest{Username: "author1_err"})
@@ -265,7 +317,7 @@ func TestAuth_Handler(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	// 4. Login: Success
+	// 4. Login: Success via Username
 	loginBody, _ := json.Marshal(LoginRequest{
 		Username: "john",
 		Password: "password",
@@ -275,6 +327,36 @@ func TestAuth_Handler(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 4b. Login: Success via Email
+	loginEmailBody, _ := json.Marshal(LoginRequest{
+		Email:    "john@delcom.org",
+		Password: "password",
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(loginEmailBody))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 4c. Login: Success via Identity
+	loginIdentBody, _ := json.Marshal(LoginRequest{
+		Identity: "john",
+		Password: "password",
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(loginIdentBody))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 4d. Login: Missing identifier or password
+	emptyLoginBody, _ := json.Marshal(LoginRequest{})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(emptyLoginBody))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// 5. Login: Bad JSON
 	w = httptest.NewRecorder()

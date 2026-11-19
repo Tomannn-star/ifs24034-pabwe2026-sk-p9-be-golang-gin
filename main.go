@@ -24,7 +24,11 @@ func main() {
 	if err != nil {
 		log.Printf("Connecting to %s database failed: %v. Falling back to SQLite...", cfg.DBConnection, err)
 		cfg.DBConnection = "sqlite"
-		cfg.DBDatabase = ":memory:"
+		if os.PathSeparator == '/' {
+			cfg.DBDatabase = "/tmp/p9_blog.db"
+		} else {
+			cfg.DBDatabase = "p9_blog.db"
+		}
 		db, err = database.Connect(cfg)
 		if err != nil {
 			log.Fatalf("Failed to connect to database: %v", err)

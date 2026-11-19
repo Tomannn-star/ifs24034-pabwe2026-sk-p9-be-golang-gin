@@ -1,6 +1,8 @@
 package post
 
 import (
+	"strings"
+
 	"app/internal/database"
 
 	"gorm.io/gorm"
@@ -39,8 +41,8 @@ func (r *repository) FindAllPublic(q, category string) ([]database.Post, error) 
 	}
 
 	if q != "" {
-		search := "%" + q + "%"
-		query = query.Where("title LIKE ? OR excerpt LIKE ? OR content LIKE ?", search, search, search)
+		search := "%" + strings.ToLower(q) + "%"
+		query = query.Where("LOWER(title) LIKE ? OR LOWER(excerpt) LIKE ? OR LOWER(content) LIKE ?", search, search, search)
 	}
 
 	err := query.Order("published_at desc, id desc").Find(&posts).Error
@@ -122,7 +124,7 @@ func (r *repository) FindAllAdminUsers() ([]AdminUserStatsResponse, error) {
 	var users []database.User
 	_ = r.db.Preload("Posts").Order("id asc").Find(&users).Error
 
-	var result []AdminUserStatsResponse
+	result := []AdminUserStatsResponse{}
 	for _, u := range users {
 		var totalPosts, publishedPosts int64
 		for _, p := range u.Posts {
@@ -137,7 +139,9 @@ func (r *repository) FindAllAdminUsers() ([]AdminUserStatsResponse, error) {
 			Email:          u.Email,
 			Role:           u.Role,
 			TotalPosts:     totalPosts,
+			TotalArticles:  totalPosts,
 			PublishedPosts: publishedPosts,
+			TotalTerbit:    publishedPosts,
 			CreatedAt:      u.CreatedAt,
 		})
 	}

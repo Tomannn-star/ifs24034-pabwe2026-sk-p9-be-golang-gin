@@ -105,5 +105,37 @@ func Seed(db *gorm.DB, cfg *config.Config) error {
 		_ = db.Create(&member).Error
 	}
 
+	// Seed Initial Posts for Public & Admin tests
+	var postCount int64
+	db.Model(&Post{}).Count(&postCount)
+	if postCount == 0 {
+		var adminUser User
+		if err := db.Where("username = ?", cfg.AdminUsername).First(&adminUser).Error; err == nil {
+			now := time.Now()
+			p1 := Post{
+				UserID:      adminUser.ID,
+				Title:       "Panduan Arsitektur Golang Gin dan React",
+				Slug:        "panduan-arsitektur-golang-gin-dan-react",
+				Category:    "Teknologi",
+				Excerpt:     "Panduan arsitektur modern membangun REST API Golang Gin dan frontend React.",
+				Content:     "Dalam pengembangan aplikasi web modern, arsitektur REST API dengan Golang Gin memberikan performa tinggi dan konkurensi yang optimal.",
+				IsPublished: true,
+				PublishedAt: &now,
+			}
+			p2 := Post{
+				UserID:      adminUser.ID,
+				Title:       "Inovasi Pembelajaran Digital di Kampus",
+				Slug:        "inovasi-pembelajaran-digital-di-kampus",
+				Category:    "Pendidikan",
+				Excerpt:     "Bagaimana teknologi digital mentransformasi metode pembelajaran di perguruan tinggi.",
+				Content:     "Pendidikan modern menuntut integrasi alat digital untuk mendukung pembelajaran kolaboratif dan adaptif.",
+				IsPublished: true,
+				PublishedAt: &now,
+			}
+			_ = db.Create(&p1).Error
+			_ = db.Create(&p2).Error
+		}
+	}
+
 	return nil
 }

@@ -6,16 +6,19 @@ type RegisterRequest struct {
 	Username string `json:"username" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+	Role     string `json:"role"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Identity string `json:"identity"`
+	Password string `json:"password"`
 }
 
 type UpdateProfileRequest struct {
 	Username string `json:"username"`
-	Email    string `json:"email"`
+	Email    string `json:"email" binding:"omitempty,email"`
 	Password string `json:"password"`
 }
 

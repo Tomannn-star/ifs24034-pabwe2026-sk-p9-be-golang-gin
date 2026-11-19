@@ -39,6 +39,23 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	identifier := req.Username
+	if identifier == "" {
+		identifier = req.Email
+	}
+	if identifier == "" {
+		identifier = req.Identity
+	}
+
+	if identifier == "" || req.Password == "" {
+		response.Fail(c, http.StatusBadRequest, "Username/email and password are required")
+		return
+	}
+
+	if req.Username == "" {
+		req.Username = identifier
+	}
+
 	res, err := h.service.Login(&req)
 	if err != nil {
 		response.Fail(c, http.StatusUnauthorized, err.Error())

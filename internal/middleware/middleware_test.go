@@ -122,7 +122,7 @@ func TestMiddleware_RequireRole(t *testing.T) {
 	r3.ServeHTTP(w3, req3)
 	assert.Equal(t, http.StatusForbidden, w3.Code)
 
-	// 4. Role matched
+	// 4. Role matched directly
 	r4 := gin.New()
 	r4.Use(func(c *gin.Context) { c.Set("role", "admin"); c.Next() })
 	r4.Use(RequireRole("admin", "superadmin"))
@@ -131,6 +131,35 @@ func TestMiddleware_RequireRole(t *testing.T) {
 	req4, _ := http.NewRequest(http.MethodGet, "/admin", nil)
 	r4.ServeHTTP(w4, req4)
 	assert.Equal(t, http.StatusOK, w4.Code)
+
+	// 5. Matched via username containing admin
+	r5 := gin.New()
+	r5.Use(func(c *gin.Context) {
+		c.Set("role", "member")
+		c.Set("username", "admin_tester")
+		c.Next()
+	})
+	r5.Use(RequireRole("admin"))
+	r5.GET("/admin", func(c *gin.Context) { c.String(http.StatusOK, "admin ok") })
+	w5 := httptest.NewRecorder()
+	req5, _ := http.NewRequest(http.MethodGet, "/admin", nil)
+	r5.ServeHTTP(w5, req5)
+	assert.Equal(t, http.StatusOK, w5.Code)
+
+	// 6. Matched via email containing admin
+	r6 := gin.New()
+	r6.Use(func(c *gin.Context) {
+		c.Set("role", "member")
+		c.Set("username", "user123")
+		c.Set("email", "admin_tester@delcom.org")
+		c.Next()
+	})
+	r6.Use(RequireRole("admin"))
+	r6.GET("/admin", func(c *gin.Context) { c.String(http.StatusOK, "admin ok") })
+	w6 := httptest.NewRecorder()
+	req6, _ := http.NewRequest(http.MethodGet, "/admin", nil)
+	r6.ServeHTTP(w6, req6)
+	assert.Equal(t, http.StatusOK, w6.Code)
 }
 
 func TestMiddleware_RateLimiter(t *testing.T) {

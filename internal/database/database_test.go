@@ -20,6 +20,15 @@ func TestDatabase_SQLiteConnectAndMigrateAndSeed(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
+	// Test with empty DBDatabase to cover dbPath == "" branch
+	cfgEmpty := &config.Config{
+		DBConnection: "sqlite",
+		DBDatabase:   "",
+	}
+	dbEmpty, errEmpty := Connect(cfgEmpty)
+	assert.NoError(t, errEmpty)
+	assert.NotNil(t, dbEmpty)
+
 	err = AutoMigrate(db)
 	assert.NoError(t, err)
 

@@ -54,6 +54,8 @@ type AdminUserStatsResponse struct {
 	Email          string    `json:"email"`
 	Role           string    `json:"role"`
 	TotalPosts     int64     `json:"total_posts"`
+	TotalArticles  int64     `json:"total_articles"`
 	PublishedPosts int64     `json:"published_posts"`
+	TotalTerbit    int64     `json:"total_terbit"`
 	CreatedAt      time.Time `json:"created_at"`
 }
