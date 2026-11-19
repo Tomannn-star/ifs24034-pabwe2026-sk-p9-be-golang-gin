@@ -106,11 +106,17 @@ func toPostResponse(p *database.Post) PostResponse {
 	}
 }
 
+func toPublicPostResponse(p *database.Post) PostResponse {
+	res := toPostResponse(p)
+	res.UserID = 0
+	return res
+}
+
 func (s *service) GetPublicPosts(q, category string) ([]PostResponse, error) {
 	posts, err := s.repo.FindAllPublic(q, category)
 	res := []PostResponse{}
 	for _, p := range posts {
-		res = append(res, toPostResponse(&p))
+		res = append(res, toPublicPostResponse(&p))
 	}
 	return res, err
 }
@@ -120,7 +126,7 @@ func (s *service) GetPublicPostBySlug(slug string) (*PostResponse, error) {
 	if err != nil {
 		return nil, errors.New("post not found")
 	}
-	res := toPostResponse(post)
+	res := toPublicPostResponse(post)
 	return &res, nil
 }
 

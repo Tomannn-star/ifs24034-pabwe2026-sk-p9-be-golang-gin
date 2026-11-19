@@ -22,7 +22,7 @@ type UpdatePostRequest struct {
 
 type PostResponse struct {
 	ID             uint       `json:"id"`
-	UserID         uint       `json:"user_id"`
+	UserID         uint       `json:"user_id,omitempty"`
 	AuthorName     string     `json:"author_name"`
 	Title          string     `json:"title"`
 	Slug           string     `json:"slug"`
@@ -49,13 +49,24 @@ type PostStatsResponse struct {
 }
 
 type AdminUserStatsResponse struct {
-	ID             uint      `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Role           string    `json:"role"`
-	TotalPosts     int64     `json:"total_posts"`
-	TotalArticles  int64     `json:"total_articles"`
-	PublishedPosts int64     `json:"published_posts"`
-	TotalTerbit    int64     `json:"total_terbit"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID                uint      `json:"id"`
+	Username          string    `json:"username"`
+	Name              string    `json:"name"`
+	Email             string    `json:"email"`
+	Role              string    `json:"role"`
+	Total             int64     `json:"total"`
+	TotalPosts        int64     `json:"total_posts"`
+	TotalArticles     int64     `json:"total_articles"`
+	TotalTodos        int64     `json:"total_todos"`
+	PublishedPosts    int64     `json:"published_posts"`
+	PublishedArticles int64     `json:"published_articles"`
+	TotalPublished    int64     `json:"total_published"`
+	TotalTerbit       int64     `json:"total_terbit"`
+	TotalSelesai      int64     `json:"total_selesai"`
+	CompletedPosts    int64     `json:"completed_posts"`
+	CompletedTodos    int64     `json:"completed_todos"`
+	TotalDraft        int64     `json:"total_draft"`
+	DraftPosts        int64     `json:"draft_posts"`
+	BelumSelesai      int64     `json:"belum_selesai"`
+	CreatedAt         time.Time `json:"created_at"`
 }

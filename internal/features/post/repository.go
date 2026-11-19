@@ -133,16 +133,28 @@ func (r *repository) FindAllAdminUsers() ([]AdminUserStatsResponse, error) {
 				publishedPosts++
 			}
 		}
+		draftPosts := totalPosts - publishedPosts
 		result = append(result, AdminUserStatsResponse{
-			ID:             u.ID,
-			Username:       u.Username,
-			Email:          u.Email,
-			Role:           u.Role,
-			TotalPosts:     totalPosts,
-			TotalArticles:  totalPosts,
-			PublishedPosts: publishedPosts,
-			TotalTerbit:    publishedPosts,
-			CreatedAt:      u.CreatedAt,
+			ID:                u.ID,
+			Username:          u.Username,
+			Name:              u.Username,
+			Email:             u.Email,
+			Role:              u.Role,
+			Total:             totalPosts,
+			TotalPosts:        totalPosts,
+			TotalArticles:     totalPosts,
+			TotalTodos:        totalPosts,
+			PublishedPosts:    publishedPosts,
+			PublishedArticles: publishedPosts,
+			TotalPublished:    publishedPosts,
+			TotalTerbit:       publishedPosts,
+			TotalSelesai:      publishedPosts,
+			CompletedPosts:    publishedPosts,
+			CompletedTodos:    publishedPosts,
+			TotalDraft:        draftPosts,
+			DraftPosts:        draftPosts,
+			BelumSelesai:      draftPosts,
+			CreatedAt:         u.CreatedAt,
 		})
 	}
 	return result, nil
