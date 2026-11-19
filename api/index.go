@@ -1,12 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"runtime"
 	"sync"
+	"time"
 
 	"app/internal/config"
 	"app/internal/database"
@@ -21,6 +20,7 @@ import (
 var (
 	app     *gin.Engine
 	initErr error
+	initLog []string
 	once    sync.Once
 )
 
@@ -28,46 +28,45 @@ func initialize() {
 	defer func() {
 		if r := recover(); r != nil {
 			initErr = fmt.Errorf("panic in initialization: %v", r)
+			initLog = append(initLog, fmt.Sprintf("panic: %v", r))
 		}
 	}()
+
+	start := time.Now()
+	initLog = append(initLog, fmt.Sprintf("start init at %v", start))
 
 	gin.SetMode(gin.ReleaseMode)
 	cfg := config.LoadConfig()
 
-	// In serverless environment (Vercel), use SQLite unless an external DB host is explicitly provided
-	if cfg.DBHost == "127.0.0.1" || cfg.DBHost == "localhost" || cfg.DBHost == "" || os.Getenv("DB_HOST") == "" {
-		cfg.DBConnection = "sqlite"
-		if runtime.GOOS == "windows" {
-			cfg.DBDatabase = filepath.Join(os.TempDir(), "delcom_blog.db")
-		} else {
-			cfg.DBDatabase = "/tmp/delcom_blog.db"
-		}
-	}
+	// In serverless, always force sqlite in-memory with shared cache
+	cfg.DBConnection = "sqlite"
+	cfg.DBDatabase = "file:memdb1?mode=memory&cache=shared"
+	initLog = append(initLog, "configured sqlite in-memory shared cache")
 
+	t0 := time.Now()
 	db, err := database.Connect(cfg)
 	if err != nil {
-		cfg.DBConnection = "sqlite"
-		if runtime.GOOS == "windows" {
-			cfg.DBDatabase = filepath.Join(os.TempDir(), "delcom_blog.db")
-		} else {
-			cfg.DBDatabase = "/tmp/delcom_blog.db"
-		}
-		db, err = database.Connect(cfg)
-		if err != nil {
-			initErr = fmt.Errorf("failed to connect database: %w", err)
-			return
-		}
+		initErr = fmt.Errorf("database.Connect failed: %w", err)
+		initLog = append(initLog, fmt.Sprintf("db connect failed: %v", err))
+		return
 	}
+	initLog = append(initLog, fmt.Sprintf("db connected in %v", time.Since(t0)))
 
+	t1 := time.Now()
 	if err := database.AutoMigrate(db); err != nil {
-		initErr = fmt.Errorf("failed to migrate database: %w", err)
+		initErr = fmt.Errorf("database.AutoMigrate failed: %w", err)
+		initLog = append(initLog, fmt.Sprintf("db migrate failed: %v", err))
 		return
 	}
+	initLog = append(initLog, fmt.Sprintf("db migrated in %v", time.Since(t1)))
 
+	t2 := time.Now()
 	if err := database.Seed(db, cfg); err != nil {
-		initErr = fmt.Errorf("failed to seed database: %w", err)
+		initErr = fmt.Errorf("database.Seed failed: %w", err)
+		initLog = append(initLog, fmt.Sprintf("db seed failed: %v", err))
 		return
 	}
+	initLog = append(initLog, fmt.Sprintf("db seeded in %v", time.Since(t2)))
 
 	authRepo := auth.NewRepository(db)
 	authSvc := auth.NewService(authRepo, cfg.AppKey)
@@ -83,6 +82,7 @@ func initialize() {
 	aiHandler := ai.NewHandler(aiSvc)
 
 	app = server.SetupRouter(cfg, authHandler, postHandler, aiHandler)
+	initLog = append(initLog, fmt.Sprintf("router setup complete in %v total", time.Since(start)))
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -90,16 +90,48 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if rec := recover(); rec != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte(fmt.Sprintf(`{"error":{"code":"500","message":"Panic in handler: %v"}}`, rec)))
+			res, _ := json.Marshal(map[string]interface{}{
+				"error": map[string]string{
+					"code":    "500",
+					"message": fmt.Sprintf("Panic in handler: %v", rec),
+				},
+				"log": initLog,
+			})
+			_, _ = w.Write(res)
 		}
 	}()
+
+	if r.URL.Path == "/debug" || r.URL.Path == "/api/debug" {
+		once.Do(initialize)
+		w.Header().Set("Content-Type", "application/json")
+		status := "ok"
+		if initErr != nil {
+			status = "error"
+		}
+		res, _ := json.Marshal(map[string]interface{}{
+			"status": status,
+			"error":  fmt.Sprintf("%v", initErr),
+			"log":    initLog,
+			"path":   r.URL.Path,
+		})
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(res)
+		return
+	}
 
 	once.Do(initialize)
 
 	if initErr != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(fmt.Sprintf(`{"error":{"code":"500","message":"Initialization error: %s"}}`, initErr.Error())))
+		res, _ := json.Marshal(map[string]interface{}{
+			"error": map[string]string{
+				"code":    "500",
+				"message": fmt.Sprintf("Init error: %v", initErr),
+			},
+			"log": initLog,
+		})
+		_, _ = w.Write(res)
 		return
 	}
 

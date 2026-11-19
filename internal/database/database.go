@@ -50,7 +50,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 		}
 		dialector = sqlite.Open(dbPath)
 	} else {
-		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s connect_timeout=5",
 			cfg.DBHost, cfg.DBUsername, cfg.DBPassword, cfg.DBDatabase, cfg.DBPort, cfg.DBSSLMode)
 		dialector = postgres.Open(dsn)
 	}
@@ -60,6 +60,13 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.DBConnection == "sqlite" {
+		if sqlDB, err := db.DB(); err == nil {
+			sqlDB.SetMaxOpenConns(1)
+			sqlDB.SetMaxIdleConns(1)
+		}
 	}
 
 	return db, nil
